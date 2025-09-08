@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ConalepFood - Bienvenido</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
+    <style>
+:root {
+    --verde-conalep: #006341;
+    --verde-claro: #00a86b;
+    --blanco: #ffffff;
+    --gris-oscuro: #2c2c2c;
+    --gris-claro: #f2f2f2;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--gris-claro);
+    color: var(--gris-oscuro);
+    line-height: 1.6;
+}
+
+/* Header */
+header {
+    background: linear-gradient(to right, var(--verde-conalep), var(--verde-claro));
+    color: var(--blanco);
+    padding: 25px 15px;
+    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 5px solid var(--blanco);
+}
+
+header img {
+    width: 70px;
+}
+
+header h1 {
+    font-size: 2.2em;
+    margin: 0 10px;
+    font-weight: 700;
+}
+
+header p {
+    font-size: 1em;
+    width: 100%;
+    text-align: center;
+}
+
+/* Botones */
+#btnLoginLogout, #btnRegister {
+    background-color: var(--blanco);
+    color: var(--verde-conalep);
+    border: none;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#btnLoginLogout:hover, #btnRegister:hover {
+    background-color: var(--verde-claro);
+    color: var(--blanco);
+    transform: translateY(-2px);
+}
+
+/* Sections */
+section {
+    padding: 50px 20px;
+    max-width: 1100px;
+    margin: auto;
+}
+
+.info-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.info-section img {
+    width: 100%;
+    max-width: 450px;
+    border-radius: 15px;
+    transition: transform 0.3s ease;
+}
+
+.info-section img:hover {
+    transform: scale(1.03);
+}
+
+.info-text {
+    flex: 1;
+    min-width: 260px;
+}
+
+.info-text h2 {
+    color: var(--verde-conalep);
+    margin-bottom: 15px;
+}
+
+/* Beneficios */
+.beneficios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+.beneficio {
+    background-color: white;
+    padding: 25px 20px;
+    border-radius: 15px;
+    width: 260px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.beneficio:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.18);
+}
+
+.beneficio img {
+    width: 60px;
+    margin-bottom: 12px;
+}
+
+/* CTA */
+.cta {
+    text-align: center;
+    margin-top: 50px;
+}
+
+.cta a {
+    padding: 14px 40px;
+    background-color: var(--verde-conalep);
+    color: white;
+    text-decoration: none;
+    font-size: 1.1em;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.cta a:hover {
+    background-color: var(--verde-claro);
+    transform: translateY(-3px);
+}
+
+/* Footer */
+footer {
+    background-color: var(--verde-conalep);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    margin-top: 50px;
+    font-size: 0.95em;
+    letter-spacing: 0.5px;
+}
+
+/* Modales */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 150;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.55);
+    padding: 10px;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 25px 30px;
+    border-radius: 15px;
+    width: 95%;
+    max-width: 380px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.modal-content h2 {
+    margin-bottom: 18px;
+    color: var(--verde-conalep);
+    text-align: center;
+}
+
+.modal-content label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.95em;
+}
+
+.modal-content button {
+    width: 100%;
+    padding: 12px 0;
+    background-color: var(--verde-conalep);
+    border: none;
+    color: white;
+    font-weight: bold;
+    font-size: 1em;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-content button:hover {
+    background-color: var(--verde-claro);
+    transform: translateY(-2px);
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 1.6em;
+    color: #888;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #444;
+}
+
+#avisoLogin {
+    text-align: center;
+    color: red;
+    margin-top: 15px;
+    display: none;
+    font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    header h1 { font-size: 2em; }
+    .info-section img { max-width: 380px; }
+}
+
+@media (max-width: 768px) {
+    .info-section { flex-direction: column; text-align: center; }
+    .beneficio { width: 80%; }
+    .cta a { width: 80%; padding: 12px; font-size: 1em; }
+}
+
+@media (max-width: 480px) {
+    header img { width: 60px; }
+    header h1 { font-size: 1.6em; }
+    header p { font-size: 0.95em; }
+    .modal-content { width: 90%; padding: 18px 20px; }
+    .beneficio { width: 90%; }
+}
+</style>
+
+</head>
+<body>
+
+    <header>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Conalep_logo.svg/512px-Conalep_logo.svg.png" alt="Logo Conalep" />
+        <h1>ConalepFood</h1>
+        <p>Tu menú escolar en un clic</p>
+        <button id="btnRegister">Registrarse</button>
+        <button id="btnLoginLogout">Iniciar Sesión</button>
+    </header>
+
+    <section class="info-section">
+        <div class="info-text">
+            <h2>¿Qué es ConalepFood?</h2>
+            <p>ConalepFood es una plataforma digital pensada para ti. Aquí podrás solicitar tu comida diaria desde cualquier dispositivo, de forma rápida, segura y sin filas.</p>
+        </div>
+        <img src="https://images.unsplash.com/photo-1606788075761-18c5c61e394e?auto=format&fit=crop&w=800&q=80" alt="Comida escolar" />
+    </section>
+
+    <section class="info-section">
+        <img src="https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=800&q=80" alt="Estudiante feliz" />
+        <div class="info-text">
+            <h2>¿Cómo funciona?</h2>
+            <p>Solo tienes que entrar con tu cuenta escolar, elegir tu platillo favorito del día y confirmar tu pedido. ¡Así de fácil! Puedes hacerlo antes de clases o durante tus recesos.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2 style="text-align:center;">Beneficios del sistema</h2>
+        <div class="beneficios">
+            <div class="beneficio">
+                <img src="https://cdn-icons-png.flaticon.com/512/3523/3523063.png" alt="Rápido" />
+                <h3>Rápido</h3>
+                <p>Solicita tu comida en menos de un minuto.</p>
+            </div>
+            <div class="beneficio">
+                <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Fácil" />
+                <h3>Fácil de usar</h3>
+                <p>Diseñado para que cualquier estudiante pueda utilizarlo sin complicaciones.</p>
+            </div>
+            <div class="beneficio">
+                <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="Saludable" />
+                <h3>Comida saludable</h3>
+                <p>Accede a menús balanceados y pensados para tu nutrición.</p>
+            </div>
+        </div>
+
+        <div class="cta">
+            <a href="#" id="verMenuBtn">Ver Menú de Hoy</a>
+        </div>
+
+        <div id="avisoLogin">⚠️ Por favor inicia sesión para ver el menú.</div>
+    </section>
+
+    <footer>
+        © 2025 ConalepFood - Plataforma de Comidas Escolares
+    </footer>
+
+    <!-- Modal Login -->
+    <div id="modalLogin" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modalCloseBtn">&times;</span>
+            <h2>Iniciar Sesión</h2>
+            <form id="loginForm">
+                <label for="username">Nombre de usuario</label>
+                <input type="text" id="username" name="username" placeholder="Tu usuario" required />
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" placeholder="Tu contraseña" required />
+                <button type="submit">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+   
+        <!-- Formulario Registro (actualizado) -->
+           <div id="modalRegister" class="modal">
+           <div class="modal-content">
+           <span class="modal-close" id="modalRegisterClose">&times;</span>
+           <h2>Registrarse</h2>
+            <form id="registerForm">
+            <label for="regUsername">Nombre de usuario</label>
+            <input type="text" id="regUsername" name="username" placeholder="Tu usuario" required />
+            
+            <label for="regPassword">Contraseña</label>
+            <input type="password" id="regPassword" name="password" placeholder="Tu contraseña" required />
+
+            <label for="regCorreo">Correo electrónico</label>
+            <input type="email" id="regCorreo" name="correo" placeholder="correo@ejemplo.com" required />
+
+            <label for="regNumero">Número de teléfono</label>
+            <input type="text" id="regNumero" name="numero" placeholder="5520123456" required />
+            
+    
+            <button type="submit">Crear cuenta</button>
+        </form>
+    </div>
+</div>
+
+<!-- Formulario de verificación -->
+<div id="modalVerificacion" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" id="modalVerificacionClose">&times;</span>
+        <h2>Verificar cuenta</h2>
+        <p>Introduce el código que recibiste en tu correo o número de teléfono:</p>
+        <form id="verificacionForm">
+            <input type="text" id="codigoVerificacion" placeholder="Código de 6 dígitos" required />
+            <button type="submit">Verificar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // --- Variables globales ---
+    let usuarioRegistrado = ''; // Guardaremos temporalmente el usuario registrado
+
+    // --- Elementos del DOM ---
+    const registerForm = document.getElementById('registerForm');
+    const modalRegister = document.getElementById('modalRegister');
+    const modalVerificacion = document.getElementById('modalVerificacion');
+    const verificacionForm = document.getElementById('verificacionForm');
+    const modalVerificacionClose = document.getElementById('modalVerificacionClose');
+
+    const btnRegister = document.getElementById('btnRegister');
+    const btnLoginLogout = document.getElementById('btnLoginLogout');
+    const modalLogin = document.getElementById('modalLogin');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const loginForm = document.getElementById('loginForm');
+    const verMenuBtn = document.getElementById('verMenuBtn');
+
+    // --- Mostrar/ocultar modales ---
+    btnRegister.addEventListener('click', () => modalRegister.style.display = 'block');
+    modalRegisterClose.addEventListener('click', () => modalRegister.style.display = 'none');
+    modalVerificacionClose.addEventListener('click', () => modalVerificacion.style.display = 'none');
+    modalCloseBtn.addEventListener('click', () => modalLogin.style.display = 'none');
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modalRegister) modalRegister.style.display = 'none';
+        if (e.target === modalVerificacion) modalVerificacion.style.display = 'none';
+        if (e.target === modalLogin) modalLogin.style.display = 'none';
+    });
+
+    // --- Registro con envío de código ---
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('regUsername').value.trim();
+        const password = document.getElementById('regPassword').value.trim();
+        const correo = document.getElementById('regCorreo').value.trim();
+        const numero = document.getElementById('regNumero').value.trim();
+
+        usuarioRegistrado = username; // Guardamos el usuario temporalmente
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, correo, numero })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                modalRegister.style.display = 'none';
+                modalVerificacion.style.display = 'block';
+                alert('Se envió un código de verificación a tu correo y número.');
+            } else {
+                alert(data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al conectarse al servidor.');
+        }
+    });
+
+    // --- Verificación de código ---
+    verificacionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const codigo = document.getElementById('codigoVerificacion').value.trim();
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: usuarioRegistrado, codigo })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                modalVerificacion.style.display = 'none';
+                localStorage.setItem('conalepUser', usuarioRegistrado); // Guardamos usuario verificado
+                alert('¡Cuenta verificada correctamente!');
+                checkUser();
+            } else {
+                alert('Código incorrecto.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al conectarse al servidor.');
+        }
+    });
+
+    // --- Login y menú ---
+    function checkUser() {
+        const user = localStorage.getItem('conalepUser');
+        if (user) {
+            btnLoginLogout.textContent = `Cerrar sesión (${user})`;
+            btnRegister.style.display = 'none';
+        } else {
+            btnLoginLogout.textContent = 'Iniciar Sesión';
+            btnRegister.style.display = 'inline-block';
+        }
+    }
+    checkUser();
+
+    btnLoginLogout.addEventListener('click', () => {
+        if (localStorage.getItem('conalepUser')) {
+            if (confirm('¿Quieres cerrar sesión?')) {
+                localStorage.removeItem('conalepUser');
+                checkUser();
+            }
+        } else {
+            modalLogin.style.display = 'block';
+        }
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                localStorage.setItem('conalepUser', username);
+                modalLogin.style.display = 'none';
+                checkUser();
+                alert(data.message);
+            } else {
+                alert(data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al conectarse al servidor.');
+        }
+    });
+
+    verMenuBtn.addEventListener('click', (e) => {
+        if (!localStorage.getItem('conalepUser')) {
+            e.preventDefault();
+            alert('Debes iniciar sesión para ver el menú.');
+        } else {
+            window.location.href = 'menu.html';
+        }
+    });
+</script>
+
+
+</body>
+</html>

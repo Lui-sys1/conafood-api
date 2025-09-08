@@ -1,0 +1,16 @@
+2025-09-07 17:42:58,386 WARNING: * Debugger is active!
+2025-09-07 17:42:58,391 INFO: * Debugger PIN: 151-135-466
+2025-09-07 17:42:58,421 WARNING: * Debugger is active!
+2025-09-07 17:42:58,425 INFO: * Debugger PIN: 151-135-466
+2025-09-07 17:43:06,609 INFO:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-09-07 17:43:06,609 INFO:[33mPress CTRL+C to quit[0m
+2025-09-07 17:43:06,610 INFO: * Restarting with stat
+2025-09-07 17:43:07,067 WARNING: * Debugger is active!
+2025-09-07 17:43:07,070 INFO: * Debugger PIN: 151-135-466
+2025-09-07 17:43:14,137 INFO:127.0.0.1 - - [07/Sep/2025 17:43:14] "OPTIONS /register HTTP/1.1" 200 -
+2025-09-07 17:43:14,340 INFO:127.0.0.1 - - [07/Sep/2025 17:43:14] "[35m[1mPOST /register HTTP/1.1[0m" 500 -
+2025-09-07 17:43:31,860 INFO:127.0.0.1 - - [07/Sep/2025 17:43:31] "OPTIONS /register HTTP/1.1" 200 -
+2025-09-07 17:43:31,944 INFO:127.0.0.1 - - [07/Sep/2025 17:43:31] "[35m[1mPOST /register HTTP/1.1[0m" 500 -
+2025-09-07 17:44:55,579 INFO: * Detected change in 'C:\\Users\\LuisEspejelHernandez\\Downloads\\Nueva carpeta\\registro.py', reloading
+2025-09-07 17:44:55,639 INFO: * Restarting with stat
