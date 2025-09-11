@@ -393,153 +393,153 @@ footer {
 </div>
 
 <script>
-    // --- Variables globales ---
-    let usuarioRegistrado = ''; // Guardaremos temporalmente el usuario registrado
+const BASE_URL = 'https://conalepfood-api-6.onrender.com';
+let usuarioRegistrado = '';
 
-    // --- Elementos del DOM ---
-    const registerForm = document.getElementById('registerForm');
-    const modalRegister = document.getElementById('modalRegister');
-    const modalVerificacion = document.getElementById('modalVerificacion');
-    const verificacionForm = document.getElementById('verificacionForm');
-    const modalVerificacionClose = document.getElementById('modalVerificacionClose');
+const registerForm = document.getElementById('registerForm');
+const modalRegister = document.getElementById('modalRegister');
+const modalVerificacion = document.getElementById('modalVerificacion');
+const verificacionForm = document.getElementById('verificacionForm');
+const modalVerificacionClose = document.getElementById('modalVerificacionClose');
 
-    const btnRegister = document.getElementById('btnRegister');
-    const btnLoginLogout = document.getElementById('btnLoginLogout');
-    const modalLogin = document.getElementById('modalLogin');
-    const modalCloseBtn = document.getElementById('modalCloseBtn');
-    const loginForm = document.getElementById('loginForm');
-    const verMenuBtn = document.getElementById('verMenuBtn');
+const btnRegister = document.getElementById('btnRegister');
+const btnLoginLogout = document.getElementById('btnLoginLogout');
+const modalLogin = document.getElementById('modalLogin');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+const loginForm = document.getElementById('loginForm');
+const verMenuBtn = document.getElementById('verMenuBtn');
 
-    // --- Mostrar/ocultar modales ---
-    btnRegister.addEventListener('click', () => modalRegister.style.display = 'block');
-    modalRegisterClose.addEventListener('click', () => modalRegister.style.display = 'none');
-    modalVerificacionClose.addEventListener('click', () => modalVerificacion.style.display = 'none');
-    modalCloseBtn.addEventListener('click', () => modalLogin.style.display = 'none');
+// Mostrar/ocultar modales
+btnRegister.addEventListener('click', () => modalRegister.style.display = 'block');
+modalRegisterClose.addEventListener('click', () => modalRegister.style.display = 'none');
+modalVerificacionClose.addEventListener('click', () => modalVerificacion.style.display = 'none');
+modalCloseBtn.addEventListener('click', () => modalLogin.style.display = 'none');
 
-    window.addEventListener('click', (e) => {
-        if (e.target === modalRegister) modalRegister.style.display = 'none';
-        if (e.target === modalVerificacion) modalVerificacion.style.display = 'none';
-        if (e.target === modalLogin) modalLogin.style.display = 'none';
-    });
+window.addEventListener('click', (e) => {
+    if (e.target === modalRegister) modalRegister.style.display = 'none';
+    if (e.target === modalVerificacion) modalVerificacion.style.display = 'none';
+    if (e.target === modalLogin) modalLogin.style.display = 'none';
+});
 
-    // --- Registro con envío de código ---
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = document.getElementById('regUsername').value.trim();
-        const password = document.getElementById('regPassword').value.trim();
-        const correo = document.getElementById('regCorreo').value.trim();
-        const numero = document.getElementById('regNumero').value.trim();
+// Registro
+registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    const correo = document.getElementById('regCorreo').value.trim();
+    const numero = document.getElementById('regNumero').value.trim();
 
-        usuarioRegistrado = username; // Guardamos el usuario temporalmente
+    usuarioRegistrado = username;
 
-        try {
-            const res = await fetch('http://127.0.0.1:5000/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, correo, numero })
-            });
-            const data = await res.json();
+    try {
+        const res = await fetch(`${BASE_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, correo, numero })
+        });
+        const data = await res.json();
 
-            if (res.ok) {
-                modalRegister.style.display = 'none';
-                modalVerificacion.style.display = 'block';
-                alert('Se envió un código de verificación a tu correo y número.');
-            } else {
-                alert(data.error);
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error al conectarse al servidor.');
-        }
-    });
-
-    // --- Verificación de código ---
-    verificacionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const codigo = document.getElementById('codigoVerificacion').value.trim();
-
-        try {
-            const res = await fetch('http://127.0.0.1:5000/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: usuarioRegistrado, codigo })
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                modalVerificacion.style.display = 'none';
-                localStorage.setItem('conalepUser', usuarioRegistrado); // Guardamos usuario verificado
-                alert('¡Cuenta verificada correctamente!');
-                checkUser();
-            } else {
-                alert('Código incorrecto.');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error al conectarse al servidor.');
-        }
-    });
-
-    // --- Login y menú ---
-    function checkUser() {
-        const user = localStorage.getItem('conalepUser');
-        if (user) {
-            btnLoginLogout.textContent = `Cerrar sesión (${user})`;
-            btnRegister.style.display = 'none';
+        if (res.ok) {
+            modalRegister.style.display = 'none';
+            modalVerificacion.style.display = 'block';
+            alert('Se envió un código de verificación a tu correo y número.');
         } else {
-            btnLoginLogout.textContent = 'Iniciar Sesión';
-            btnRegister.style.display = 'inline-block';
+            alert(data.error);
         }
+    } catch (err) {
+        console.error(err);
+        alert('Error al conectarse al servidor.');
     }
-    checkUser();
+});
 
-    btnLoginLogout.addEventListener('click', () => {
-        if (localStorage.getItem('conalepUser')) {
-            if (confirm('¿Quieres cerrar sesión?')) {
-                localStorage.removeItem('conalepUser');
-                checkUser();
-            }
+// Verificación
+verificacionForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const codigo = document.getElementById('codigoVerificacion').value.trim();
+
+    try {
+        const res = await fetch(`${BASE_URL}/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: usuarioRegistrado, codigo })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            modalVerificacion.style.display = 'none';
+            localStorage.setItem('conalepUser', usuarioRegistrado);
+            alert('¡Cuenta verificada correctamente!');
+            checkUser();
         } else {
-            modalLogin.style.display = 'block';
+            alert('Código incorrecto.');
         }
-    });
+    } catch (err) {
+        console.error(err);
+        alert('Error al conectarse al servidor.');
+    }
+});
 
-    loginForm.addEventListener('submit', async (e) => {
+// Login y menú
+function checkUser() {
+    const user = localStorage.getItem('conalepUser');
+    if (user) {
+        btnLoginLogout.textContent = `Cerrar sesión (${user})`;
+        btnRegister.style.display = 'none';
+    } else {
+        btnLoginLogout.textContent = 'Iniciar Sesión';
+        btnRegister.style.display = 'inline-block';
+    }
+}
+checkUser();
+
+btnLoginLogout.addEventListener('click', () => {
+    if (localStorage.getItem('conalepUser')) {
+        if (confirm('¿Quieres cerrar sesión?')) {
+            localStorage.removeItem('conalepUser');
+            checkUser();
+        }
+    } else {
+        modalLogin.style.display = 'block';
+    }
+});
+
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    try {
+        const res = await fetch(`${BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem('conalepUser', username);
+            modalLogin.style.display = 'none';
+            checkUser();
+            alert(data.message);
+        } else {
+            alert(data.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al conectarse al servidor.');
+    }
+});
+
+verMenuBtn.addEventListener('click', (e) => {
+    if (!localStorage.getItem('conalepUser')) {
         e.preventDefault();
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value.trim();
-
-        try {
-            const res = await fetch('http://127.0.0.1:5000/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                localStorage.setItem('conalepUser', username);
-                modalLogin.style.display = 'none';
-                checkUser();
-                alert(data.message);
-            } else {
-                alert(data.error);
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error al conectarse al servidor.');
-        }
-    });
-
-    verMenuBtn.addEventListener('click', (e) => {
-        if (!localStorage.getItem('conalepUser')) {
-            e.preventDefault();
-            alert('Debes iniciar sesión para ver el menú.');
-        } else {
-            window.location.href = 'menu.html';
-        }
-    });
+        alert('Debes iniciar sesión para ver el menú.');
+    } else {
+        window.location.href = 'menu.html';
+    }
+});
 </script>
+
 
 
 </body>
