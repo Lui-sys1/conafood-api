@@ -18,8 +18,31 @@ CORS(app)
 verification_codes = {}
 
 # --- Configuración de correo (usa Secrets en Render/Replit) ---
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "correo@ejemplo.com")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "clave123")
+import smtplib
+from email.mime.text import MIMEText
+
+def enviar_correo(destinatario, codigo):
+    remitente = 'conafood8@gmail.com'  # 
+    password = 'bvpjxtptpzmf upwd'  
+    asunto = 'Código de verificación ConaFood'
+    mensaje = f'Tu código de verificación es: {codigo}'
+
+    msg = MIMEText(mensaje)
+    msg['Subject'] = asunto
+    msg['From'] = remitente
+    msg['To'] = destinatario
+
+    try:
+        # Conexión segura con Gmail
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(remitente, password)
+            server.send_message(msg)
+        print("Correo enviado correctamente a", destinatario)
+        return True
+    except Exception as e:
+        print("Error al mandar el correo:", e)
+        return False
 
 # --- Función para conexión SQLite ---
 def get_db_connection():
@@ -40,25 +63,6 @@ with get_db_connection() as db:
         )
     """)
     db.commit()
-
-# --- Función para enviar correos ---
-def send_email(to_email, code):
-    msg = MIMEText(f"Tu código de verificación es: {code}")
-    msg['Subject'] = "Código de verificación Conafood"
-    msg['From'] = EMAIL_ADDRESS
-    msg['To'] = to_email
-
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        logging.info(f"Correo enviado a {to_email}")
-        return True
-    except Exception as e:
-        logging.error(f"Error enviando correo: {e}")
-        return False
 
 # --- Endpoints API ---
 @app.route('/register', methods=['POST'])
@@ -93,8 +97,10 @@ def register():
         code = str(random.randint(100000, 999999))
         verification_codes[username] = code
 
-        if not send_email(correo, code):
-            return jsonify(error="Error al enviar correo"), 500
+        if not enviar_correo(correo, code):
+         return jsonify(error="Error al enviar correo"), 500
+
+
 
         return jsonify(message="Registro exitoso! Revisa tu correo para el código.")
     except Exception as e:
