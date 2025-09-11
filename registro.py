@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import sqlite3
 import random
@@ -17,7 +17,7 @@ CORS(app)
 # --- Diccionario temporal para códigos ---
 verification_codes = {}
 
-# --- Variables de entorno para correo ---
+# --- Configuración de correo (usa Secrets en Render/Replit) ---
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "correo@ejemplo.com")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "clave123")
 
@@ -41,12 +41,6 @@ with get_db_connection() as db:
     """)
     db.commit()
 
-# --- Endpoint raíz ---
-@app.route('/index.html')
-def menu():
-    return render_template('index.html')
-
-
 # --- Función para enviar correos ---
 def send_email(to_email, code):
     msg = MIMEText(f"Tu código de verificación es: {code}")
@@ -66,7 +60,7 @@ def send_email(to_email, code):
         logging.error(f"Error enviando correo: {e}")
         return False
 
-# --- Endpoint de registro ---
+# --- Endpoints API ---
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -110,7 +104,6 @@ def register():
         cursor.close()
         db.close()
 
-# --- Endpoint de verificación ---
 @app.route('/verify', methods=['POST'])
 def verify():
     data = request.json
@@ -140,7 +133,6 @@ def verify():
 
     return jsonify(error="Código incorrecto."), 400
 
-# --- Endpoint de login ---
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -167,7 +159,6 @@ def login():
         cursor.close()
         db.close()
 
-# --- Endpoint para ver todos los usuarios ---
 @app.route('/usuarios', methods=['GET'])
 def get_users():
     try:
@@ -191,7 +182,15 @@ def get_users():
         logging.error("Error al obtener usuarios", exc_info=True)
         return jsonify(error="Error en el servidor"), 500
 
+# --- Endpoints HTML ---
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/menu')
+def menu():
+    return render_template('menu.html')
+
 # --- Ejecutar la app ---
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=8080, debug=True)
