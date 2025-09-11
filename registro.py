@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import sqlite3
 import random
 import smtplib
 from email.mime.text import MIMEText
 import logging
-import time
-from mysql.connector import pooling, Error
+import os
 
 # --- Configuración logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,43 +17,40 @@ CORS(app)
 # --- Diccionario temporal para códigos ---
 verification_codes = {}
 
-# --- Configuración de correo ---
-EMAIL_ADDRESS = "conafood8@gmail.com"
-EMAIL_PASSWORD = "bvpjxtptpzmfupwd"
+# --- Variables de entorno para correo ---
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "correo@ejemplo.com")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "clave123")
 
-# --- Configuración pool de conexiones ---
-dbconfig = {
-    "host": "localhost",
-    "user": "Luis.5531",
-    "password": "Ab231850026-7",
-    "database": "conalepfood"
-}
+# --- Función para conexión SQLite ---
+def get_db_connection():
+    conn = sqlite3.connect("conafood.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
-try:
-    connection_pool = pooling.MySQLConnectionPool(
-        pool_name="mypool",
-        pool_size=5,
-        **dbconfig
-    )
-    logging.info("Pool de conexiones creado correctamente")
-except Error as e:
-    logging.error(f"Error creando pool de conexiones: {e}")
-    raise e
+# --- Crear tabla si no existe ---
+with get_db_connection() as db:
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password TEXT,
+            correo TEXT UNIQUE,
+            numero TEXT,
+            verificado INTEGER DEFAULT 0
+        )
+    """)
+    db.commit()
 
-def get_db_connection(retries=3, delay=2):
-    for attempt in range(retries):
-        try:
-            conn = connection_pool.get_connection()
-            if conn.is_connected():
-                return conn
-        except Error as e:
-            logging.error(f"Error conexión MySQL (intento {attempt+1}): {e}")
-            time.sleep(delay)
-    raise ConnectionError("No se pudo conectar a la base de datos después de varios intentos.")
+# --- Endpoint raíz ---
+@app.route('/index.html')
+def menu():
+    return render_template('index.html')
 
+
+# --- Función para enviar correos ---
 def send_email(to_email, code):
     msg = MIMEText(f"Tu código de verificación es: {code}")
-    msg['Subject'] = "Código de verificación ConalepFood"
+    msg['Subject'] = "Código de verificación Conafood"
     msg['From'] = EMAIL_ADDRESS
     msg['To'] = to_email
 
@@ -85,16 +82,16 @@ def register():
         db = get_db_connection()
         cursor = db.cursor()
 
-        cursor.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
+        cursor.execute("SELECT * FROM usuarios WHERE username = ?", (username,))
         if cursor.fetchone():
             return jsonify(error="El usuario ya existe"), 400
 
-        cursor.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
+        cursor.execute("SELECT * FROM usuarios WHERE correo = ?", (correo,))
         if cursor.fetchone():
             return jsonify(error="El correo ya está registrado"), 400
 
         cursor.execute(
-            "INSERT INTO usuarios (username, password, correo, numero) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO usuarios (username, password, correo, numero) VALUES (?, ?, ?, ?)",
             (username, password, correo, numero)
         )
         db.commit()
@@ -110,11 +107,8 @@ def register():
         logging.error("Error en registro", exc_info=True)
         return jsonify(error=f"Error interno en el servidor: {str(e)}"), 500
     finally:
-        try:
-            cursor.close()
-            db.close()
-        except:
-            pass
+        cursor.close()
+        db.close()
 
 # --- Endpoint de verificación ---
 @app.route('/verify', methods=['POST'])
@@ -133,7 +127,7 @@ def verify():
         try:
             db = get_db_connection()
             cursor = db.cursor()
-            cursor.execute("UPDATE usuarios SET verificado = 1 WHERE username = %s", (username,))
+            cursor.execute("UPDATE usuarios SET verificado = 1 WHERE username = ?", (username,))
             db.commit()
             verification_codes.pop(username, None)
             return jsonify(message="Cuenta verificada correctamente!")
@@ -141,11 +135,8 @@ def verify():
             logging.error("Error al verificar cuenta", exc_info=True)
             return jsonify(error="Error del servidor al verificar"), 500
         finally:
-            try:
-                cursor.close()
-                db.close()
-            except:
-                pass
+            cursor.close()
+            db.close()
 
     return jsonify(error="Código incorrecto."), 400
 
@@ -162,7 +153,7 @@ def login():
     try:
         db = get_db_connection()
         cursor = db.cursor()
-        cursor.execute("SELECT password FROM usuarios WHERE username = %s", (username,))
+        cursor.execute("SELECT password FROM usuarios WHERE username = ?", (username,))
         row = cursor.fetchone()
 
         if row and row[0] == password:
@@ -173,12 +164,34 @@ def login():
         logging.error("Error en login", exc_info=True)
         return jsonify(error="Error en el servidor"), 500
     finally:
-        try:
-            cursor.close()
-            db.close()
-        except:
-            pass
+        cursor.close()
+        db.close()
+
+# --- Endpoint para ver todos los usuarios ---
+@app.route('/usuarios', methods=['GET'])
+def get_users():
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute("SELECT username, correo, numero, verificado FROM usuarios")
+        rows = cursor.fetchall()
+        cursor.close()
+        db.close()
+
+        usuarios = []
+        for row in rows:
+            usuarios.append({
+                "username": row[0],
+                "correo": row[1],
+                "numero": row[2],
+                "verificado": row[3]
+            })
+        return jsonify(usuarios)
+    except Exception as e:
+        logging.error("Error al obtener usuarios", exc_info=True)
+        return jsonify(error="Error en el servidor"), 500
 
 # --- Ejecutar la app ---
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=True)
