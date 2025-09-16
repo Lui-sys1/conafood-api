@@ -1,6 +1,6 @@
 import os
 import psycopg
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import random
 import smtplib
@@ -56,6 +56,16 @@ def send_verification_email(to_email, code):
         logging.info(f"Código enviado a {to_email}")
     except Exception as e:
         logging.error(f"Error enviando correo: {e}")
+
+# --- Ruta para servir index ---
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+# --- Ruta para servir menu ---
+@app.route("/menu")
+def menu():
+    return render_template("menu.html")
 
 # --- Ruta para registrar usuario (solo envía código) ---
 @app.route("/register", methods=["POST"])
