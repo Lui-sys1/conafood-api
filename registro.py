@@ -63,7 +63,7 @@ def index():
     return render_template("index.html")
 
 # --- Ruta para servir menu ---
-@app.route("/menu")
+@app.route("/menu.html")
 def menu():
     return render_template("menu.html")
 
