@@ -59,17 +59,13 @@ def send_verification_email(to_email, code):
 
 # --- Ruta para servir index ---
 @app.route("/")
-def index():
-    return render_template("index.html")
+def show_index():
+return render_template("index.html")
 
 # --- Ruta para servir menu ---
-@app.route("/menu.html")
-def menu():
-    return render_template("menu.html")
-# --- Ruta para servir index ---
-@app.route("/regresar.html")
-def regresar():
-    return render_template("index.html")
+@app.route("/menu")
+def show_menu():
+return render_template("menu.html")
 # --- Ruta para registrar usuario (solo envía código) ---
 @app.route("/register", methods=["POST"])
 def register():
