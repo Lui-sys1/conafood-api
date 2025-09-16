@@ -67,7 +67,7 @@ def index():
 def menu():
     return render_template("menu.html")
 # --- Ruta para servir index ---
-@app.route("/")
+@app.route("/regresar.html")
 def index():
     return render_template("index.html")
 # --- Ruta para registrar usuario (solo envía código) ---
