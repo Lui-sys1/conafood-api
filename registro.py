@@ -1,6 +1,5 @@
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import random
@@ -23,13 +22,14 @@ DB_USER = os.getenv("DB_USER", "luis5531")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "q16ddEGzzySuQJeWHHx6iG4GO0rht9kG")
 
 def get_db_connection():
-    return psycopg2.connect(
+    # psycopg 3, autocommit=True para no usar conn.commit() manual
+    return psycopg.connect(
         host=DB_HOST,
         port=DB_PORT,
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
-        cursor_factory=RealDictCursor
+        autocommit=True
     )
 
 # --- Almacenamiento temporal de códigos de verificación ---
@@ -41,7 +41,7 @@ def send_verification_email(to_email, code):
         smtp_host = "smtp.gmail.com"
         smtp_port = 587
         smtp_user = "conafood8@gmail.com"
-        smtp_pass = "bvpjxtptpzmf upwd"
+        smtp_pass = "bvpjxtptpzmfupwd"
         
         msg = MIMEText(f"Tu código de verificación es: {code}")
         msg['Subject'] = "Código de verificación ConaFood"
@@ -94,20 +94,17 @@ def verify():
     # Crear usuario en DB con verificado = TRUE
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, %s)",
-            (
-                username,
-                verification_codes[username]["password"],
-                verification_codes[username]["correo"],
-                verification_codes[username]["numero"],
-                True
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, %s)",
+                (
+                    username,
+                    verification_codes[username]["password"],
+                    verification_codes[username]["correo"],
+                    verification_codes[username]["numero"],
+                    True
+                )
             )
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
         # Eliminar de almacenamiento temporal
         del verification_codes[username]
         return jsonify({"message": "Usuario creado correctamente"}), 200
@@ -124,14 +121,12 @@ def login():
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM usuarios WHERE username=%s AND password=%s AND verificado=TRUE",
-            (username, password)
-        )
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cursor:
+            cursor.execute(
+                "SELECT * FROM usuarios WHERE username=%s AND password=%s AND verificado=TRUE",
+                (username, password)
+            )
+            user = cursor.fetchone()
 
         if user:
             return jsonify({"message": f"Bienvenido {username}"}), 200
