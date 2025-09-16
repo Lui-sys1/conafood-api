@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import sqlite3
+import mysql.connector
 import random
 import smtplib
 from email.mime.text import MIMEText
@@ -14,16 +14,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 CORS(app)
 
-# --- Diccionario temporal para códigos ---
+# --- Diccionarios temporales ---
 verification_codes = {}
+pending_users = {}
 
-# --- Configuración de correo (usa Secrets en Render/Replit) ---
-import smtplib
-from email.mime.text import MIMEText
-
+# --- Configuración de correo ---
 def enviar_correo(destinatario, codigo):
-    remitente = 'conafood8@gmail.com'  # 
-    password = 'bvpjxtptpzmf upwd'  
+    remitente = 'conafood8@gmail.com'
+    password = 'bvpjxtptpzmf upwd'  # ⚠️ Usa variable de entorno en Render
     asunto = 'Código de verificación ConaFood'
     mensaje = f'Tu código de verificación es: {codigo}'
 
@@ -33,7 +31,6 @@ def enviar_correo(destinatario, codigo):
     msg['To'] = destinatario
 
     try:
-        # Conexión segura con Gmail
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(remitente, password)
@@ -44,29 +41,18 @@ def enviar_correo(destinatario, codigo):
         print("Error al mandar el correo:", e)
         return False
 
-# --- Función para conexión SQLite ---
+# --- Conexión a MySQL ---
 def get_db_connection():
-    conn = sqlite3.connect("conafood.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    return mysql.connector.connect(
+        host=os.getenv("DB_HOST", "localhost"),      # Cambia en Render
+        user=os.getenv("DB_USER", "root"),           # Cambia en Render
+        password=os.getenv("DB_PASS", ""),           # Cambia en Render
+        database=os.getenv("DB_NAME", "conalepfood") # Tu BD
+    )
 
-# --- Crear tabla si no existe ---
-with get_db_connection() as db:
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT,
-            correo TEXT UNIQUE,
-            numero TEXT,
-            verificado INTEGER DEFAULT 0
-        )
-    """)
-    db.commit()
-
-# --- Endpoints API ---
-@app.route('/register', methods=['POST'])
-def register():
+# --- Paso 1: Pre-registro ---
+@app.route('/pre_register', methods=['POST'])
+def pre_register():
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -80,65 +66,77 @@ def register():
         db = get_db_connection()
         cursor = db.cursor()
 
-        cursor.execute("SELECT * FROM usuarios WHERE username = ?", (username,))
+        # Verificar si ya existen
+        cursor.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
         if cursor.fetchone():
             return jsonify(error="El usuario ya existe"), 400
 
-        cursor.execute("SELECT * FROM usuarios WHERE correo = ?", (correo,))
+        cursor.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
         if cursor.fetchone():
             return jsonify(error="El correo ya está registrado"), 400
 
-        cursor.execute(
-            "INSERT INTO usuarios (username, password, correo, numero) VALUES (?, ?, ?, ?)",
-            (username, password, correo, numero)
-        )
-        db.commit()
-
+        # Generar código y guardar en memoria
         code = str(random.randint(100000, 999999))
-        verification_codes[username] = code
+        verification_codes[correo] = code
+        pending_users[correo] = {
+            "username": username,
+            "password": password,
+            "numero": numero
+        }
 
         if not enviar_correo(correo, code):
-         return jsonify(error="Error al enviar correo"), 500
+            return jsonify(error="Error al enviar correo"), 500
 
-
-
-        return jsonify(message="Registro exitoso! Revisa tu correo para el código.")
+        return jsonify(message="Código enviado al correo. Verifica tu cuenta.")
     except Exception as e:
-        logging.error("Error en registro", exc_info=True)
-        return jsonify(error=f"Error interno en el servidor: {str(e)}"), 500
+        logging.error("Error en pre-registro", exc_info=True)
+        return jsonify(error="Error interno en el servidor"), 500
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
+# --- Paso 2: Verificación y creación de usuario ---
 @app.route('/verify', methods=['POST'])
 def verify():
     data = request.json
-    username = data.get('username')
+    correo = data.get('correo')
     code = data.get('codigo')
 
-    if not username or not code:
+    if not correo or not code:
         return jsonify(error="Faltan datos"), 400
 
-    if username not in verification_codes:
-        return jsonify(error="No se encontró un código para este usuario"), 400
+    if correo not in verification_codes or verification_codes[correo] != code:
+        return jsonify(error="Código incorrecto."), 400
 
-    if verification_codes[username] == code:
-        try:
-            db = get_db_connection()
-            cursor = db.cursor()
-            cursor.execute("UPDATE usuarios SET verificado = 1 WHERE username = ?", (username,))
-            db.commit()
-            verification_codes.pop(username, None)
-            return jsonify(message="Cuenta verificada correctamente!")
-        except Exception as e:
-            logging.error("Error al verificar cuenta", exc_info=True)
-            return jsonify(error="Error del servidor al verificar"), 500
-        finally:
-            cursor.close()
-            db.close()
+    try:
+        # Recuperar datos pendientes
+        user_data = pending_users.get(correo)
+        if not user_data:
+            return jsonify(error="No hay registro pendiente para este correo"), 400
 
-    return jsonify(error="Código incorrecto."), 400
+        db = get_db_connection()
+        cursor = db.cursor()
 
+        # Insertar usuario ya verificado
+        cursor.execute(
+            "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, %s)",
+            (user_data['username'], user_data['password'], correo, user_data['numero'], 1)
+        )
+        db.commit()
+
+        # Limpiar temporales
+        verification_codes.pop(correo, None)
+        pending_users.pop(correo, None)
+
+        return jsonify(message="Cuenta verificada y creada con éxito!")
+    except Exception as e:
+        logging.error("Error al verificar cuenta", exc_info=True)
+        return jsonify(error="Error en el servidor al verificar"), 500
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+# --- Login ---
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -151,7 +149,7 @@ def login():
     try:
         db = get_db_connection()
         cursor = db.cursor()
-        cursor.execute("SELECT password FROM usuarios WHERE username = ?", (username,))
+        cursor.execute("SELECT password FROM usuarios WHERE username = %s", (username,))
         row = cursor.fetchone()
 
         if row and row[0] == password:
@@ -162,9 +160,10 @@ def login():
         logging.error("Error en login", exc_info=True)
         return jsonify(error="Error en el servidor"), 500
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
+# --- Ver usuarios (solo para pruebas) ---
 @app.route('/usuarios', methods=['GET'])
 def get_users():
     try:
@@ -172,8 +171,6 @@ def get_users():
         cursor = db.cursor()
         cursor.execute("SELECT username, correo, numero, verificado FROM usuarios")
         rows = cursor.fetchall()
-        cursor.close()
-        db.close()
 
         usuarios = []
         for row in rows:
@@ -187,8 +184,11 @@ def get_users():
     except Exception as e:
         logging.error("Error al obtener usuarios", exc_info=True)
         return jsonify(error="Error en el servidor"), 500
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
 
-# --- Endpoints HTML ---
+# --- HTML ---
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -197,6 +197,6 @@ def index():
 def menu():
     return render_template('menu.html')
 
-# --- Ejecutar la app ---
+# --- Ejecutar app ---
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8080, debug=True)
