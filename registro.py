@@ -14,14 +14,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 CORS(app)
 
-# --- Diccionarios temporales ---
+# --- Diccionario temporal para códigos ---
 verification_codes = {}
-pending_users = {}
 
 # --- Configuración de correo ---
 def enviar_correo(destinatario, codigo):
-    remitente = 'conafood8@gmail.com'
-    password = 'bvpjxtptpzmf upwd'  # ⚠️ Usa variable de entorno en Render
+    remitente = os.getenv("EMAIL_USER", "conafood8@gmail.com")
+    password = os.getenv("EMAIL_PASS", "bvpjxtptpzmf upwd")
     asunto = 'Código de verificación ConaFood'
     mensaje = f'Tu código de verificación es: {codigo}'
 
@@ -41,18 +40,39 @@ def enviar_correo(destinatario, codigo):
         print("Error al mandar el correo:", e)
         return False
 
-# --- Conexión a MySQL ---
+# --- Función para conexión MySQL ---
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST", "localhost"),      # Cambia en Render
-        user=os.getenv("DB_USER", "root"),           # Cambia en Render
-        password=os.getenv("DB_PASS", ""),           # Cambia en Render
-        database=os.getenv("DB_NAME", "conalepfood") # Tu BD
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS"),
+        database=os.getenv("DB_NAME")
     )
 
-# --- Paso 1: Pre-registro ---
-@app.route('/pre_register', methods=['POST'])
-def pre_register():
+# --- Crear tabla si no existe ---
+try:
+    db = get_db_connection()
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) UNIQUE,
+            password VARCHAR(255),
+            correo VARCHAR(100) UNIQUE,
+            numero VARCHAR(20),
+            verificado TINYINT DEFAULT 0
+        )
+    """)
+    db.commit()
+finally:
+    if cursor: cursor.close()
+    if db: db.close()
+
+# --- Endpoints API ---
+
+# Registro: envía código de verificación primero
+@app.route('/register', methods=['POST'])
+def register():
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -62,81 +82,63 @@ def pre_register():
     if not username or not password or not correo or not numero:
         return jsonify(error="Todos los campos son obligatorios"), 400
 
-    try:
-        db = get_db_connection()
-        cursor = db.cursor()
+    # Generar código de verificación antes de crear usuario
+    code = str(random.randint(100000, 999999))
+    verification_codes[username] = {
+        "code": code,
+        "username": username,
+        "password": password,
+        "correo": correo,
+        "numero": numero
+    }
 
-        # Verificar si ya existen
-        cursor.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
-        if cursor.fetchone():
-            return jsonify(error="El usuario ya existe"), 400
+    if enviar_correo(correo, code):
+        return jsonify(message="Código de verificación enviado. Verifica tu correo para completar el registro.")
+    else:
+        return jsonify(error="Error al enviar correo"), 500
 
-        cursor.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
-        if cursor.fetchone():
-            return jsonify(error="El correo ya está registrado"), 400
-
-        # Generar código y guardar en memoria
-        code = str(random.randint(100000, 999999))
-        verification_codes[correo] = code
-        pending_users[correo] = {
-            "username": username,
-            "password": password,
-            "numero": numero
-        }
-
-        if not enviar_correo(correo, code):
-            return jsonify(error="Error al enviar correo"), 500
-
-        return jsonify(message="Código enviado al correo. Verifica tu cuenta.")
-    except Exception as e:
-        logging.error("Error en pre-registro", exc_info=True)
-        return jsonify(error="Error interno en el servidor"), 500
-    finally:
-        if cursor: cursor.close()
-        if db: db.close()
-
-# --- Paso 2: Verificación y creación de usuario ---
+# Verificación y creación del usuario
 @app.route('/verify', methods=['POST'])
 def verify():
     data = request.json
-    correo = data.get('correo')
+    username = data.get('username')
     code = data.get('codigo')
 
-    if not correo or not code:
+    if not username or not code:
         return jsonify(error="Faltan datos"), 400
 
-    if correo not in verification_codes or verification_codes[correo] != code:
-        return jsonify(error="Código incorrecto."), 400
+    if username not in verification_codes:
+        return jsonify(error="No se encontró un código para este usuario"), 400
 
+    if verification_codes[username]["code"] != code:
+        return jsonify(error="Código incorrecto"), 400
+
+    # Crear usuario en la BD
+    db = None
+    cursor = None
     try:
-        # Recuperar datos pendientes
-        user_data = pending_users.get(correo)
-        if not user_data:
-            return jsonify(error="No hay registro pendiente para este correo"), 400
-
         db = get_db_connection()
         cursor = db.cursor()
+        user = verification_codes[username]
+        cursor.execute("SELECT * FROM usuarios WHERE username = %s OR correo = %s", (user["username"], user["correo"]))
+        if cursor.fetchone():
+            return jsonify(error="El usuario o correo ya existe"), 400
 
-        # Insertar usuario ya verificado
         cursor.execute(
-            "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, %s)",
-            (user_data['username'], user_data['password'], correo, user_data['numero'], 1)
+            "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, 1)",
+            (user["username"], user["password"], user["correo"], user["numero"])
         )
         db.commit()
-
-        # Limpiar temporales
-        verification_codes.pop(correo, None)
-        pending_users.pop(correo, None)
-
-        return jsonify(message="Cuenta verificada y creada con éxito!")
+        verification_codes.pop(username)
+        return jsonify(message="Usuario creado y verificado correctamente!")
     except Exception as e:
-        logging.error("Error al verificar cuenta", exc_info=True)
-        return jsonify(error="Error en el servidor al verificar"), 500
+        logging.error("Error al crear usuario", exc_info=True)
+        return jsonify(error="Error del servidor al crear usuario"), 500
     finally:
         if cursor: cursor.close()
         if db: db.close()
 
-# --- Login ---
+# Login
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -146,12 +148,13 @@ def login():
     if not username or not password:
         return jsonify(error="Faltan usuario o contraseña"), 400
 
+    db = None
+    cursor = None
     try:
         db = get_db_connection()
         cursor = db.cursor()
-        cursor.execute("SELECT password FROM usuarios WHERE username = %s", (username,))
+        cursor.execute("SELECT password FROM usuarios WHERE username = %s AND verificado = 1", (username,))
         row = cursor.fetchone()
-
         if row and row[0] == password:
             return jsonify(message="Login exitoso!")
         else:
@@ -163,23 +166,17 @@ def login():
         if cursor: cursor.close()
         if db: db.close()
 
-# --- Ver usuarios (solo para pruebas) ---
+# Obtener usuarios
 @app.route('/usuarios', methods=['GET'])
 def get_users():
+    db = None
+    cursor = None
     try:
         db = get_db_connection()
         cursor = db.cursor()
         cursor.execute("SELECT username, correo, numero, verificado FROM usuarios")
         rows = cursor.fetchall()
-
-        usuarios = []
-        for row in rows:
-            usuarios.append({
-                "username": row[0],
-                "correo": row[1],
-                "numero": row[2],
-                "verificado": row[3]
-            })
+        usuarios = [{"username": r[0], "correo": r[1], "numero": r[2], "verificado": r[3]} for r in rows]
         return jsonify(usuarios)
     except Exception as e:
         logging.error("Error al obtener usuarios", exc_info=True)
@@ -188,7 +185,7 @@ def get_users():
         if cursor: cursor.close()
         if db: db.close()
 
-# --- HTML ---
+# HTML
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -197,6 +194,6 @@ def index():
 def menu():
     return render_template('menu.html')
 
-# --- Ejecutar app ---
+# Ejecutar app
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8080, debug=True)
