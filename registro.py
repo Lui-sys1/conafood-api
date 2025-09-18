@@ -16,27 +16,21 @@ CORS(app)
 
 # --- Configuración DB PostgreSQL ---
 DB_HOST = os.getenv("DB_HOST", "dpg-d34rvonfte5s73adba80-a.oregon-postgres.render.com")
-DB_PORT = int(os.getenv("DB_PORT", 5432))
+DB_PORT = os.getenv("DB_PORT", 5432)
 DB_NAME = os.getenv("DB_NAME", "conafood")
 DB_USER = os.getenv("DB_USER", "luis5531")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "q16ddEGzzySuQJeWHHx6iG4GO0rht9kG")
 
 def get_db_connection():
-    """Crea y devuelve una conexión a la base de datos con manejo de errores"""
-    try:
-        conn = psycopg.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            autocommit=True
-        )
-        logging.info("Conexión a la DB exitosa")
-        return conn
-    except Exception as e:
-        logging.error(f"Error al conectar a la base de datos: {e}")
-        return None
+    # psycopg 3, autocommit=True para no usar conn.commit() manual
+    return psycopg.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        autocommit=True
+    )
 
 # --- Almacenamiento temporal de códigos de verificación ---
 verification_codes = {}
@@ -63,20 +57,16 @@ def send_verification_email(to_email, code):
     except Exception as e:
         logging.error(f"Error enviando correo: {e}")
 
-# --- Rutas de frontend ---
+# --- Ruta para servir index ---
 @app.route("/")
 def show_index():
     return render_template("index.html")
 
+# --- Ruta para servir menu ---
 @app.route("/menu.html")
 def show_menu():
     return render_template("menu.html")
-
-@app.route("/panel")
-def show_panel():
-    return render_template("panel_cafeteria.html")
-
-# --- Registro de usuario (envía código) ---
+# --- Ruta para registrar usuario (solo envía código) ---
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
@@ -88,14 +78,16 @@ def register():
     if not all([username, password, correo, numero]):
         return jsonify({"error": "Faltan datos"}), 400
 
+    # Generar código aleatorio de 6 dígitos
     code = str(random.randint(100000, 999999))
     verification_codes[username] = {"code": code, "password": password, "correo": correo, "numero": numero}
 
+    # Enviar código por correo
     send_verification_email(correo, code)
 
     return jsonify({"message": "Código de verificación enviado"}), 200
 
-# --- Verificación de usuario ---
+# --- Ruta para verificar usuario y crear en DB ---
 @app.route("/verify", methods=["POST"])
 def verify():
     data = request.json
@@ -104,14 +96,13 @@ def verify():
 
     if username not in verification_codes:
         return jsonify({"error": "Usuario no encontrado o código expirado"}), 404
+
     if verification_codes[username]["code"] != code:
         return jsonify({"error": "Código incorrecto"}), 400
 
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
-
+    # Crear usuario en DB con verificado = TRUE
     try:
+        conn = get_db_connection()
         with conn.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, %s)",
@@ -123,24 +114,22 @@ def verify():
                     True
                 )
             )
+        # Eliminar de almacenamiento temporal
         del verification_codes[username]
         return jsonify({"message": "Usuario creado correctamente"}), 200
     except Exception as e:
         logging.error(f"Error creando usuario: {e}")
         return jsonify({"error": "Error creando usuario"}), 500
 
-# --- Login ---
+# --- Ruta login ---
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
 
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
-
     try:
+        conn = get_db_connection()
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cursor:
             cursor.execute(
                 "SELECT * FROM usuarios WHERE username=%s AND password=%s AND verificado=TRUE",
@@ -156,40 +145,5 @@ def login():
         logging.error(f"Error en login: {e}")
         return jsonify({"error": "Error conectando a la base de datos"}), 500
 
-# --- API Pedidos ---
-@app.route("/pedidos", methods=["GET"])
-def obtener_pedidos():
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
-
-    try:
-        with conn.cursor(row_factory=psycopg.rows.dict_row) as cursor:
-            cursor.execute("SELECT * FROM vista_pedidos ORDER BY fecha DESC;")
-            pedidos = cursor.fetchall()
-        return jsonify(pedidos)
-    except Exception as e:
-        logging.error(f"Error obteniendo pedidos: {e}")
-        return jsonify({"error": "No se pudieron obtener los pedidos"}), 500
-
-@app.route("/pedidos/<int:pedido_id>", methods=["PATCH"])
-def actualizar_pedido(pedido_id):
-    nuevo_estado = request.json.get("estado")
-    if nuevo_estado not in ["pendiente", "en_preparacion", "entregado"]:
-        return jsonify({"error": "Estado inválido"}), 400
-
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
-
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE pedidos SET estado=%s WHERE id_pedido=%s", (nuevo_estado, pedido_id))
-        return jsonify({"message": "Pedido actualizado"}), 200
-    except Exception as e:
-        logging.error(f"Error actualizando pedido: {e}")
-        return jsonify({"error": "No se pudo actualizar el pedido"}), 500
-
-# --- Ejecutar servidor ---
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
