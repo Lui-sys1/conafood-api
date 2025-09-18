@@ -1,51 +1,64 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ConalepFood - Menú del Día</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet"/>
-  <style>
-    /* Tu CSS existente aquí, sin cambios */
-    :root {
-      --verde-conalep: #006341;
-      --verde-claro: #00a86b;
-      --blanco: #ffffff;
-      --gris-claro: #f4f4f4;
-    }
-    * { box-sizing: border-box; margin:0; padding:0; }
-    body { font-family: 'Montserrat', sans-serif; background-color: var(--gris-claro); color: #333; }
-    header { background-color: var(--verde-conalep); color: white; padding:30px 20px; text-align:center; }
-    header h1 { margin-bottom:10px; }
-    .buscador-carrito { display:flex; justify-content:center; align-items:center; gap:15px; margin-top:20px; flex-wrap:wrap; }
-    .buscador-carrito input { padding:10px; border:none; border-radius:20px; width:250px; }
-    .carrito-btn { background-color:white; color:var(--verde-conalep); border:none; padding:10px 20px; border-radius:30px; cursor:pointer; font-weight:bold; }
-    .menu-container { display:flex; flex-wrap:wrap; gap:30px; justify-content:center; margin:40px 20px; }
-    .platillo { background-color:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); width:300px; overflow:hidden; text-align:center; }
-    .platillo img { width:100%; height:180px; object-fit:cover; }
-    .platillo-content { padding:15px; }
-    .platillo h3 { margin-bottom:5px; color:var(--verde-conalep); }
-    .platillo .precio { color:#000; font-weight:bold; margin-bottom:10px; }
-    .platillo p { font-size:0.95em; margin-bottom:15px; }
-    .platillo button { padding:10px 25px; background-color:var(--verde-conalep); color:white; border:none; border-radius:30px; cursor:pointer; transition:background-color 0.3s ease; }
-    .platillo button:hover { background-color:var(--verde-claro); }
-    .carrito-visual { display:none; position:fixed; right:20px; top:20px; background-color:white; border:1px solid #ccc; padding:20px; width:320px; max-height:500px; overflow-y:auto; box-shadow:0 0 10px rgba(0,0,0,0.2); border-radius:10px; z-index:100; }
-    .carrito-visual h3 { margin-bottom:10px; color:var(--verde-conalep); }
-    .carrito-visual ul { list-style:none; padding-left:0; margin-bottom:15px; }
-    .carrito-visual li { margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center; font-size:0.95em; }
-    .carrito-visual li button { background:none; color:red; border:none; font-size:1em; cursor:pointer; }
-    .carrito-total { font-weight:bold; text-align:right; color:#000; margin-bottom:15px; }
-    .btn-comprar { width:100%; padding:12px 0; background-color:var(--verde-conalep); border:none; color:white; font-weight:bold; font-size:1.1em; border-radius:30px; cursor:pointer; transition: background-color 0.3s ease; }
-    .btn-comprar:hover { background-color: var(--verde-claro); }
-    footer { text-align:center; margin-top:40px; color:#666; padding:20px; }
-    @media (max-width: 768px) { .buscador-carrito { flex-direction:column; gap:10px; } .carrito-visual { width:90%; right:5%; top:10%; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConalepFood - Menú del Día</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --verde-conalep: #006341;
+  --verde-claro: #00a86b;
+  --blanco: #ffffff;
+  --gris-claro: #f4f4f4;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Montserrat', sans-serif; background-color: var(--gris-claro); color: #333; }
+
+header {
+  background-color: var(--verde-conalep);
+  color: white;
+  padding: 30px 20px;
+  text-align: center;
+}
+header h1 { margin-bottom: 10px; }
+.buscador-carrito { display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap; }
+.buscador-carrito input { padding: 10px; border: none; border-radius: 20px; width: 250px; }
+.carrito-btn { background-color: white; color: var(--verde-conalep); border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; }
+
+.menu-container { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; margin: 40px 20px; }
+.platillo { background-color: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 300px; overflow: hidden; text-align: center; }
+.platillo img { width: 100%; height: 180px; object-fit: cover; }
+.platillo-content { padding: 15px; }
+.platillo h3 { margin-bottom: 5px; color: var(--verde-conalep); }
+.platillo .precio { color: #000; font-weight: bold; margin-bottom: 10px; }
+.platillo button { padding: 10px 25px; background-color: var(--verde-conalep); color: white; border: none; border-radius: 30px; cursor: pointer; transition: background-color 0.3s ease; }
+.platillo button:hover { background-color: var(--verde-claro); }
+
+.carrito-visual { display: none; position: fixed; right: 20px; top: 20px; background-color: white; border: 1px solid #ccc; padding: 20px; width: 320px; max-height: 500px; overflow-y: auto; box-shadow: 0 0 10px rgba(0,0,0,0.2); border-radius: 10px; z-index: 100; }
+.carrito-visual h3 { margin-bottom: 10px; color: var(--verde-conalep); }
+.carrito-visual ul { list-style: none; padding-left: 0; margin-bottom: 15px; }
+.carrito-visual li { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 0.95em; }
+.carrito-visual li button { background: none; color: red; border: none; font-size: 1em; cursor: pointer; }
+.carrito-total { font-weight: bold; text-align: right; color: #000; margin-bottom: 15px; }
+.btn-comprar { width: 100%; padding: 12px 0; background-color: var(--verde-conalep); border: none; color: white; font-weight: bold; font-size: 1.1em; border-radius: 30px; cursor: pointer; transition: background-color 0.3s ease; }
+.btn-comprar:hover { background-color: var(--verde-claro); }
+
+footer { text-align: center; margin-top: 40px; color: #666; padding: 20px; }
+
+@media (max-width: 768px) {
+  .buscador-carrito { flex-direction: column; gap: 10px; }
+  .carrito-visual { width: 90%; right: 5%; top: 10%; }
+}
+</style>
 </head>
 <body>
 
 <header>
   <h1>Menú del Día</h1>
   <p>Realiza tu pedido y recógelo en la cafetería</p>
+
   <div class="buscador-carrito">
     <button class="carrito-btn" onclick="window.location.href='/'">⬅️ Regresar a Inicio</button>
     <input type="text" id="buscador" placeholder="Buscar comida...">
@@ -67,26 +80,22 @@
 </footer>
 
 <script>
-const backendURL = "https://cafeteria-appi.onrender.com"; // <- Cambia por tu URL de Render
+const backendURL = "https://cafeteria-appi.onrender.com"; // URL de tu backend
 
 const platillos = [
-  { nombre:"Tacos al Pastor", descripcion:"Incluye 3 tacos con piña, salsa y limón. Disponible hasta las 12:30 p.m.", imagen:"https://images.unsplash.com/photo-1604908177731-186beeeb270b?auto=format&fit=crop&w=800&q=80", precio:30 },
-  { nombre:"Ensalada César", descripcion:"Ensalada fresca con pollo, lechuga, aderezo césar y crotones.", imagen:"https://images.unsplash.com/photo-1598515213695-89b00c3e1b55?auto=format&fit=crop&w=800&q=80", precio:40 },
-  { nombre:"Sándwich de Pollo", descripcion:"Pan integral, pollo a la plancha, lechuga, jitomate y aderezo especial.", imagen:"https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=800&q=80", precio:35 }
+  { nombre: "Tacos al Pastor", descripcion: "Incluye 3 tacos con piña, salsa y limón.", imagen: "https://images.unsplash.com/photo-1604908177731-186beeeb270b?auto=format&fit=crop&w=800&q=80", precio: 30 },
+  { nombre: "Ensalada César", descripcion: "Ensalada fresca con pollo, lechuga, aderezo césar y crotones.", imagen: "https://images.unsplash.com/photo-1598515213695-89b00c3e1b55?auto=format&fit=crop&w=800&q=80", precio: 40 },
+  { nombre: "Sándwich de Pollo", descripcion: "Pan integral, pollo a la plancha, lechuga, jitomate y aderezo especial.", imagen: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=800&q=80", precio: 35 }
 ];
 
 let carrito = [];
-const menuContainer = document.getElementById('menuContainer');
-const listaCarrito = document.getElementById('listaCarrito');
-const buscador = document.getElementById('buscador');
-const cantidadCarrito = document.getElementById('cantidadCarrito');
-const totalCarrito = document.getElementById('totalCarrito');
 
 function renderPlatillos(filtrados = platillos) {
-  menuContainer.innerHTML = '';
+  const container = document.getElementById("menuContainer");
+  container.innerHTML = "";
   filtrados.forEach((platillo, i) => {
-    const div = document.createElement('div');
-    div.className = 'platillo';
+    const div = document.createElement("div");
+    div.className = "platillo";
     div.innerHTML = `
       <img src="${platillo.imagen}" alt="${platillo.nombre}">
       <div class="platillo-content">
@@ -96,12 +105,12 @@ function renderPlatillos(filtrados = platillos) {
         <button onclick="agregarAlCarrito(${i})">Agregar al carrito</button>
       </div>
     `;
-    menuContainer.appendChild(div);
+    container.appendChild(div);
   });
 }
 
 function agregarAlCarrito(index) {
-  carrito.push(platillos[index]);
+  carrito.push({...platillos[index], cantidad:1});
   actualizarCarrito();
 }
 
@@ -111,59 +120,47 @@ function quitarDelCarrito(i) {
 }
 
 function actualizarCarrito() {
-  listaCarrito.innerHTML = '';
+  const lista = document.getElementById("listaCarrito");
+  lista.innerHTML = "";
   let total = 0;
   carrito.forEach((item,i)=>{
     total += item.precio;
-    const li = document.createElement('li');
+    const li = document.createElement("li");
     li.innerHTML = `${item.nombre} - $${item.precio.toFixed(2)} <button onclick="quitarDelCarrito(${i})">❌</button>`;
-    listaCarrito.appendChild(li);
+    lista.appendChild(li);
   });
-  cantidadCarrito.textContent = carrito.length;
-  totalCarrito.textContent = `Total: $${total.toFixed(2)}`;
+  document.getElementById("cantidadCarrito").textContent = carrito.length;
+  document.getElementById("totalCarrito").textContent = `Total: $${total.toFixed(2)}`;
 }
 
 function mostrarCarrito() {
-  const carritoBox = document.getElementById('carritoVisual');
-  carritoBox.style.display = carritoBox.style.display === 'block' ? 'none' : 'block';
-}
-
-function generarID() {
-  return 'CF' + Math.random().toString(36).substr(2,8).toUpperCase();
+  const box = document.getElementById("carritoVisual");
+  box.style.display = box.style.display === "block" ? "none" : "block";
 }
 
 async function comprar() {
-  if(carrito.length===0) { alert('Tu carrito está vacío'); return; }
-
-  const idCompra = generarID();
-
-  // Enviar cada producto al backend
-  for(const item of carrito){
-    try {
-      await fetch(`${backendURL}/pedidos`, {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          usuario: "AlumnoEjemplo", // Cambiar a usuario real
-          producto: item.nombre,
-          cantidad:1
-        })
-      });
-    } catch(e){
-      console.error("Error enviando pedido:",e);
-    }
+  if(carrito.length===0){ alert("Tu carrito está vacío"); return; }
+  const usuario = "Anónimo"; // Cambiar si hay login
+  const response = await fetch(`${backendURL}/pedidos`, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({usuario, carrito})
+  });
+  const data = await response.json();
+  if(response.ok){
+    alert(`Compra registrada. ID de pedido: ${data.id_pedido}`);
+    carrito = [];
+    actualizarCarrito();
+    mostrarCarrito();
+  } else {
+    alert(`Error: ${data.error}`);
   }
-
-  alert(`Gracias por tu compra.\nID de compra: ${idCompra}\nPago en efectivo en cafetería.`);
-
-  carrito = [];
-  actualizarCarrito();
-  mostrarCarrito();
 }
 
-buscador.addEventListener('input', (e)=>{
+document.getElementById("buscador").addEventListener("input", (e)=>{
   const texto = e.target.value.toLowerCase();
-  renderPlatillos(platillos.filter(p=>p.nombre.toLowerCase().includes(texto)||p.descripcion.toLowerCase().includes(texto)));
+  const filtrados = platillos.filter(p=> p.nombre.toLowerCase().includes(texto) || p.descripcion.toLowerCase().includes(texto));
+  renderPlatillos(filtrados);
 });
 
 renderPlatillos();
