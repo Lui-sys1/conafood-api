@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Cafetería - ConaFood</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <header class="bg-white shadow p-6 rounded-b-lg mb-6">
+        <h1 class="text-4xl font-extrabold text-gray-800 text-center">Panel de Pedidos - Cafetería</h1>
+        <p class="text-center text-gray-500 mt-1">Visualiza y gestiona los pedidos en tiempo real</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Columnas de estado -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4 text-red-600">Pendientes</h2>
+            <div id="pendientes" class="space-y-4"></div>
+        </div>
+        <div>
+            <h2 class="text-xl font-semibold mb-4 text-yellow-500">En Preparación</h2>
+            <div id="en_preparacion" class="space-y-4"></div>
+        </div>
+        <div>
+            <h2 class="text-xl font-semibold mb-4 text-green-600">Entregados</h2>
+            <div id="entregados" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <footer class="text-center text-gray-500 text-sm mt-8 mb-4">
+        &copy; 2025 ConaFood. Todos los derechos reservados.
+    </footer>
+
+    <script>
+        async function cargarPedidos() {
+            const res = await fetch("/pedidos");
+            const pedidos = await res.json();
+
+            // Limpiar columnas
+            document.getElementById("pendientes").innerHTML = "";
+            document.getElementById("en_preparacion").innerHTML = "";
+            document.getElementById("entregados").innerHTML = "";
+
+            pedidos.forEach(p => {
+                const card = document.createElement("div");
+                card.className = "bg-white shadow rounded-lg p-4 flex flex-col space-y-2";
+
+                card.innerHTML = `
+                    <p><strong>ID:</strong> ${p.id_pedido}</p>
+                    <p><strong>Usuario:</strong> ${p.usuario}</p>
+                    <p><strong>Producto:</strong> ${p.producto}</p>
+                    <p><strong>Cantidad:</strong> ${p.cantidad}</p>
+                    <p class="font-semibold ${p.estado === 'pendiente' ? 'text-red-500' : p.estado === 'en_preparacion' ? 'text-yellow-500' : 'text-green-500'}"><strong>Estado:</strong> ${p.estado}</p>
+                    ${p.estado !== 'entregado' ? `<button class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" onclick="marcarEntregado(${p.id_pedido})">✔ Entregado</button>` : ''}
+                `;
+
+                // Agregar a la columna correspondiente
+                document.getElementById(p.estado).appendChild(card);
+            });
+        }
+
+        async function marcarEntregado(id) {
+            await fetch(`/pedidos/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ estado: "entregado" })
+            });
+            cargarPedidos();
+        }
+
+        cargarPedidos();
+        setInterval(cargarPedidos, 5000); // refresca cada 5 segundos
+    </script>
+
+</body>
+</html>
