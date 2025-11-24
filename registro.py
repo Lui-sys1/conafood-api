@@ -15,22 +15,11 @@ app = Flask(__name__)
 CORS(app)
 
 # --- Configuración DB PostgreSQL ---
-DB_HOST = os.getenv("DB_HOST", "dpg-dkqv0g6tg6s6s4r5v5tg-a.")
-DB_PORT = os.getenv("DB_PORT", 5432)
-DB_NAME = os.getenv("DB_NAME", "conafood_bd")
-DB_USER = os.getenv("DB_USER", "lconafood_db_user")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "mreBT4nYK92dS7kq96jnhG7qQK7eG4KO")
+DB_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
-    # psycopg 3, autocommit=True para no usar conn.commit() manual
-    return psycopg.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        autocommit=True
-    )
+    return psycopg.connect(DB_URL, autocommit=True)
+
 
 # --- Almacenamiento temporal de códigos de verificación ---
 verification_codes = {}
