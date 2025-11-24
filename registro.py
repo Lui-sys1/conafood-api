@@ -8,14 +8,12 @@ from email.mime.text import MIMEText
 import logging
 
 # --- Logging ---
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# --- Flask ---
 app = Flask(__name__)
 CORS(app)
 
-# --- Base de datos ---
+# --- DATABASE ---
 DB_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
@@ -23,7 +21,7 @@ def get_db_connection():
         raise RuntimeError("DATABASE_URL no está definida")
     return psycopg.connect(DB_URL, autocommit=True)
 
-# --- Crear tabla si no existe ---
+# Crear tabla si no existe
 def ensure_tables():
     try:
         conn = get_db_connection()
@@ -39,36 +37,37 @@ def ensure_tables():
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
             """)
-        logging.info("Tabla 'usuarios' lista.")
+        logging.info("Tabla usuarios lista")
     except Exception as e:
-        logging.error(f"ERROR creando/verificando tabla usuarios: {e}")
+        logging.error(f"Error creando tabla: {e}")
 
 ensure_tables()
 
-# --- Guardado temporal de códigos ---
+# --- CÓDIGOS DE VERIFICACIÓN TEMPORALES ---
 verification_codes = {}
 
-# --- Enviar correo con Gmail ---
+# --------------------------------------------------------
+# ✅ FUNCIÓN PARA ENVIAR CORREO USANDO **BREVO SMTP**
+# --------------------------------------------------------
 def send_verification_email(to_email, code):
     try:
-        smtp_host = "smtp.gmail.com"
+        smtp_host = "smtp-relay.brevo.com"
         smtp_port = 587
+        smtp_user = "9c5a73001@smtp-brevo.com"
+        smtp_pass = "LTVBUX301nvdctNF"     # TU PASSWORD SMTP
 
-        # 👇 CAMBIA ESTO POR TU NUEVO CORREO Y CONTRASEÑA DE APLICACIÓN
-        smtp_user = "conafood@gmail.com"
-        smtp_pass = "xnlthvcgdtauqdvw"
         msg = MIMEText(f"Tu código de verificación es: {code}")
         msg["Subject"] = "Código de verificación ConaFood"
         msg["From"] = smtp_user
         msg["To"] = to_email
 
-        server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=20)
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
         server.quit()
 
-        logging.info(f"Código enviado correctamente a {to_email}")
+        logging.info(f"Correo enviado a {to_email}")
         return True
 
     except Exception as e:
@@ -76,16 +75,12 @@ def send_verification_email(to_email, code):
         return False
 
 
-# --- Rutas de Flask ---
+# --- Rutas ---
 @app.route("/")
-def show_index():
+def index():
     return render_template("index.html")
 
-@app.route("/menu.html")
-def show_menu():
-    return render_template("menu.html")
 
-# --- Registro ---
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
@@ -97,7 +92,6 @@ def register():
     if not all([username, password, correo, numero]):
         return jsonify({"error": "Faltan datos"}), 400
 
-    # Generar código de verificación
     code = str(random.randint(100000, 999999))
 
     verification_codes[username] = {
@@ -107,13 +101,14 @@ def register():
         "numero": numero
     }
 
-    ok = send_verification_email(correo, code)
-    if not ok:
+    enviado = send_verification_email(correo, code)
+
+    if not enviado:
         return jsonify({"error": "No se pudo enviar el correo."}), 500
 
     return jsonify({"message": "Código enviado"}), 200
 
-# --- Verificación ---
+
 @app.route("/verify", methods=["POST"])
 def verify():
     data = request.json
@@ -121,32 +116,27 @@ def verify():
     code = data.get("codigo")
 
     if username not in verification_codes:
-        return jsonify({"error": "Usuario no encontrado"}), 404
+        return jsonify({"error": "Código expirado"}), 404
 
     if verification_codes[username]["code"] != code:
         return jsonify({"error": "Código incorrecto"}), 400
 
     try:
+        info = verification_codes[username]
         conn = get_db_connection()
         with conn.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO usuarios (username, password, correo, numero, verificado)
                 VALUES (%s, %s, %s, %s, TRUE)
-            """, (
-                username,
-                verification_codes[username]["password"],
-                verification_codes[username]["correo"],
-                verification_codes[username]["numero"]
-            ))
-
+            """, (username, info["password"], info["correo"], info["numero"]))
         del verification_codes[username]
-        return jsonify({"message": "Cuenta verificada"}), 200
+        return jsonify({"message": "Usuario verificado"}), 200
 
     except Exception as e:
-        logging.error(f"Error en db: {e}")
-        return jsonify({"error": "Error creando usuario"}), 500
+        logging.error(f"DB error: {e}")
+        return jsonify({"error": "Error en la base de datos"}), 500
 
-# --- Login ---
+
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
@@ -158,7 +148,7 @@ def login():
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cursor:
             cursor.execute("""
                 SELECT * FROM usuarios
-                WHERE username=%s AND password=%s AND verificado=TRUE
+                WHERE username = %s AND password = %s AND verificado = TRUE
             """, (username, password))
 
             user = cursor.fetchone()
@@ -166,11 +156,11 @@ def login():
         if user:
             return jsonify({"message": f"Bienvenido {username}"}), 200
         else:
-            return jsonify({"error": "Datos incorrectos o usuario no verificado"}), 401
+            return jsonify({"error": "Credenciales incorrectas"}), 401
 
     except Exception as e:
-        logging.error(f"ERROR login: {e}")
-        return jsonify({"error": "Error BD"}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
