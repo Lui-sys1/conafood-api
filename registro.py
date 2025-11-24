@@ -131,8 +131,6 @@ def login():
         else:
             return jsonify({"error": "Usuario o contraseña incorrecta o no verificado"}), 401
     except Exception as e:
+        # 👇 PARA DEPURAR: manda el error real al frontend
         logging.error(f"Error en login: {e}")
-        return jsonify({"error": "Error conectando a la base de datos"}), 500
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+        return jsonify({"error": f"Error BD: {str(e)}"}), 500
