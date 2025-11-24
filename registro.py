@@ -3,26 +3,39 @@ import psycopg
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import random
-import smtplib
-from email.mime.text import MIMEText
 import logging
 
-# --- Logging ---
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Brevo API
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
 
-# --- Flask ---
+# --------------------------------------------------------
+# LOGGING
+# --------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# --------------------------------------------------------
+# FLASK
+# --------------------------------------------------------
 app = Flask(__name__)
 CORS(app)
 
-# --- PostgreSQL ---
+# --------------------------------------------------------
+# BASE DE DATOS (Render)
+# --------------------------------------------------------
 DB_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
-    if not DB_URL: 
+    if not DB_URL:
+        logging.error("Falta DATABASE_URL en Render")
         raise RuntimeError("DATABASE_URL no está definida")
+
     return psycopg.connect(DB_URL, autocommit=True)
 
-# Crear tabla si no existe
+# Crear tabla automáticamente
 def ensure_tables():
     try:
         conn = get_db_connection()
@@ -38,43 +51,51 @@ def ensure_tables():
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
             """)
-        logging.info("Tabla 'usuarios' lista.")
+        logging.info("Tabla 'usuarios' verificada/creada correctamente.")
     except Exception as e:
-        logging.error(f"Error creando tabla: {e}")
+        logging.error(f"Error creando/verificando tabla 'usuarios': {e}")
 
 ensure_tables()
 
-# --- Memoria temporal de códigos ---
+# --------------------------------------------------------
+# Códigos temporales
+# --------------------------------------------------------
 verification_codes = {}
 
-# --- Función para enviar correo ---
-def send_verification_email(to_email, code) -> bool:
+# --------------------------------------------------------
+# FUNCIÓN PARA ENVIAR CORREO CON BREVO
+# --------------------------------------------------------
+def send_verification_email(to_email, code):
+    api_key = os.getenv("BREVO_API_KEY")
+    if not api_key:
+        logging.error("BREVO_API_KEY no está definida")
+        return False, "BREVO_API_KEY no definida"
+
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key['api-key'] = api_key
+
+    api_client = sib_api_v3_sdk.ApiClient(configuration)
+    email_api = sib_api_v3_sdk.TransactionalEmailsApi(api_client)
+
+    email = sib_api_v3_sdk.SendSmtpEmail(
+        to=[{"email": to_email}],
+        sender={"email": "no-reply@conafood.com", "name": "ConaFood"},
+        subject="Código de verificación ConaFood",
+        html_content=f"<p>Tu código es: <strong>{code}</strong></p>"
+    )
+
     try:
-        smtp_host = "smtp-relay.brevo.com"
-        smtp_port = 587
-        smtp_user = "9c5a73001@smtp-brevo.com"   # LOGIN SMTP
-        smtp_pass = "LTVBUX301nvdctNF"           # CONTRASEÑA SMTP DE BREVO
+        email_api.send_transac_email(email)
+        logging.info(f"Correo enviado a: {to_email}")
+        return True, None
+    except ApiException as e:
+        logging.error(f"Error BREVO API: {e}")
+        return False, str(e)
 
-        msg = MIMEText(f"Tu código de verificación es: {code}")
-        msg["Subject"] = "Código de verificación ConaFood"
-        msg["From"] = "Luis Espejel <no-reply@brevo.com>"
-        msg["To"] = to_email
+# --------------------------------------------------------
+# RUTAS
+# --------------------------------------------------------
 
-        server = smtplib.SMTP(smtp_host, smtp_port, timeout=12)
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-        server.quit()
-
-        logging.info(f"Correo enviado a {to_email}")
-        return True
-
-    except Exception as e:
-        logging.error(f"Error SMTP: {e}")
-        return False
-
-
-# --- Rutas ---
 @app.route("/")
 def show_index():
     return render_template("index.html")
@@ -83,7 +104,21 @@ def show_index():
 def show_menu():
     return render_template("menu.html")
 
-# --- Registro (genera código) ---
+
+@app.route("/db-check")
+def db_check():
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1;")
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# --------------------------------------------------------
+# REGISTRO
+# --------------------------------------------------------
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
@@ -95,6 +130,7 @@ def register():
     if not all([username, password, correo, numero]):
         return jsonify({"error": "Faltan datos"}), 400
 
+    # Código de 6 dígitos
     code = str(random.randint(100000, 999999))
 
     verification_codes[username] = {
@@ -104,12 +140,20 @@ def register():
         "numero": numero
     }
 
-    if not send_verification_email(correo, code):
-        return jsonify({"error": "No se pudo enviar el correo."}), 500
+    # Enviar correo
+    ok, err = send_verification_email(correo, code)
+    if not ok:
+        return jsonify({
+            "error": "No se pudo enviar el correo.",
+            "detail": err
+        }), 500
 
-    return jsonify({"message": "Código enviado"}), 200
+    return jsonify({"message": "Código de verificación enviado"}), 200
 
-# --- Verificar usuario ---
+
+# --------------------------------------------------------
+# VERIFICAR
+# --------------------------------------------------------
 @app.route("/verify", methods=["POST"])
 def verify():
     data = request.json
@@ -117,7 +161,7 @@ def verify():
     code = data.get("codigo")
 
     if username not in verification_codes:
-        return jsonify({"error": "Código expirado o usuario no encontrado"}), 404
+        return jsonify({"error": "Usuario no encontrado o código expirado"}), 404
 
     if verification_codes[username]["code"] != code:
         return jsonify({"error": "Código incorrecto"}), 400
@@ -127,22 +171,25 @@ def verify():
         with conn.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO usuarios (username, password, correo, numero, verificado)
-                VALUES (%s, %s, %s, %s, TRUE)
+                VALUES (%s, %s, %s, %s, %s)
             """, (
                 username,
                 verification_codes[username]["password"],
                 verification_codes[username]["correo"],
-                verification_codes[username]["numero"]
+                verification_codes[username]["numero"],
+                True
             ))
-
         del verification_codes[username]
-        return jsonify({"message": "Usuario verificado"}), 200
+        return jsonify({"message": "Usuario creado correctamente"}), 200
 
     except Exception as e:
-        logging.error(f"Error BD: {e}")
+        logging.error(f"Error creando usuario: {e}")
         return jsonify({"error": "Error creando usuario"}), 500
 
-# --- Login ---
+
+# --------------------------------------------------------
+# LOGIN
+# --------------------------------------------------------
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
@@ -153,21 +200,26 @@ def login():
         conn = get_db_connection()
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cursor:
             cursor.execute("""
-                SELECT * FROM usuarios 
-                WHERE username=%s AND password=%s AND verificado=TRUE
+                SELECT * FROM usuarios
+                WHERE username = %s
+                  AND password = %s
+                  AND verificado = TRUE
             """, (username, password))
+
             user = cursor.fetchone()
 
-        if user:
-            return jsonify({"message": f"Bienvenido {username}"}), 200
-        else:
-            return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
+            if user:
+                return jsonify({"message": f"Bienvenido {username}"}), 200
+            else:
+                return jsonify({"error": "Usuario o contraseña incorrecta o no verificado"}), 401
 
     except Exception as e:
-        logging.error(f"Login error: {e}")
-        return jsonify({"error": "Error BD"}), 500
+        logging.error(f"Error en login: {e}")
+        return jsonify({"error": "Error BD: " + str(e)}), 500
 
 
-# --- Run ---
+# --------------------------------------------------------
+# INICIO SERVIDOR
+# --------------------------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
