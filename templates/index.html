@@ -476,6 +476,7 @@ verificacionForm.addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: usuarioRegistrado, codigo })
         });
+
         const data = await res.json();
 
         if (res.ok) {
@@ -484,13 +485,19 @@ verificacionForm.addEventListener('submit', async (e) => {
             alert('¡Cuenta verificada correctamente!');
             checkUser();
         } else {
-            alert('Código incorrecto.');
+            // Aquí mostramos el mensaje que viene del backend
+            let msg = data.error || 'Error al verificar el código.';
+            if (data.detalle) {
+                msg += '\n\nDetalle: ' + data.detalle;
+            }
+            alert(msg);
         }
     } catch (err) {
         console.error(err);
         alert('Error al conectarse al servidor.');
     }
 });
+
 
 // Login y menú
 function checkUser() {
