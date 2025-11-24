@@ -23,6 +23,27 @@ def get_db_connection():
         raise RuntimeError("DATABASE_URL no está definida")
     return psycopg.connect(DB_URL, autocommit=True)
 
+# Crear tabla si no existe
+def ensure_tables():
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(100) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    correo VARCHAR(255) NOT NULL,
+                    numero VARCHAR(50) NOT NULL,
+                    verificado BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+            """)
+        logging.info("Tabla 'usuarios' verificada/creada correctamente.")
+    except Exception as e:
+        logging.error(f"Error creando/verificando tabla usuarios: {e}")
+ensure_tables()
+
 # --- Almacenamiento temporal de códigos de verificación ---
 verification_codes = {}
 
