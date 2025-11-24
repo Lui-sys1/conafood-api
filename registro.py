@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 import logging
 
 # --- Configuración logging ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # --- Flask App ---
 app = Flask(__name__)
@@ -18,8 +18,10 @@ CORS(app)
 DB_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
+    if not DB_URL:
+        logging.error("DATABASE_URL no está definida")
+        raise RuntimeError("DATABASE_URL no está definida")
     return psycopg.connect(DB_URL, autocommit=True)
-
 
 # --- Almacenamiento temporal de códigos de verificación ---
 verification_codes = {}
@@ -30,12 +32,12 @@ def send_verification_email(to_email, code):
         smtp_host = "smtp.gmail.com"
         smtp_port = 587
         smtp_user = "conafood8@gmail.com"
-        smtp_pass = "bvpjxtptpzmfupwd"
-        
+        smtp_pass = "bvpjxtptpzmfupwd"  # si cambiaste el pass de app, actualiza aquí
+
         msg = MIMEText(f"Tu código de verificación es: {code}")
-        msg['Subject'] = "Código de verificación ConaFood"
-        msg['From'] = smtp_user
-        msg['To'] = to_email
+        msg["Subject"] = "Código de verificación ConaFood"
+        msg["From"] = smtp_user
+        msg["To"] = to_email
 
         server = smtplib.SMTP(smtp_host, smtp_port)
         server.starttls()
@@ -46,15 +48,28 @@ def send_verification_email(to_email, code):
     except Exception as e:
         logging.error(f"Error enviando correo: {e}")
 
-# --- Ruta para servir index ---
+# --- Rutas estáticas ---
 @app.route("/")
 def show_index():
     return render_template("index.html")
 
-# --- Ruta para servir menu ---
 @app.route("/menu.html")
 def show_menu():
     return render_template("menu.html")
+
+# --- Ruta para probar DB ---
+@app.route("/db-check")
+def db_check():
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1;")
+            cursor.fetchone()
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        logging.error(f"DB CHECK ERROR: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 # --- Ruta para registrar usuario (solo envía código) ---
 @app.route("/register", methods=["POST"])
 def register():
@@ -67,11 +82,14 @@ def register():
     if not all([username, password, correo, numero]):
         return jsonify({"error": "Faltan datos"}), 400
 
-    # Generar código aleatorio de 6 dígitos
     code = str(random.randint(100000, 999999))
-    verification_codes[username] = {"code": code, "password": password, "correo": correo, "numero": numero}
+    verification_codes[username] = {
+        "code": code,
+        "password": password,
+        "correo": correo,
+        "numero": numero,
+    }
 
-    # Enviar código por correo
     send_verification_email(correo, code)
 
     return jsonify({"message": "Código de verificación enviado"}), 200
@@ -89,21 +107,22 @@ def verify():
     if verification_codes[username]["code"] != code:
         return jsonify({"error": "Código incorrecto"}), 400
 
-    # Crear usuario en DB con verificado = TRUE
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO usuarios (username, password, correo, numero, verificado) VALUES (%s, %s, %s, %s, %s)",
+                """
+                INSERT INTO usuarios (username, password, correo, numero, verificado)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
                 (
                     username,
                     verification_codes[username]["password"],
                     verification_codes[username]["correo"],
                     verification_codes[username]["numero"],
-                    True
-                )
+                    True,
+                ),
             )
-        # Eliminar de almacenamiento temporal
         del verification_codes[username]
         return jsonify({"message": "Usuario creado correctamente"}), 200
     except Exception as e:
@@ -121,8 +140,13 @@ def login():
         conn = get_db_connection()
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cursor:
             cursor.execute(
-                "SELECT * FROM usuarios WHERE username=%s AND password=%s AND verificado=TRUE",
-                (username, password)
+                """
+                SELECT * FROM usuarios
+                WHERE username = %s
+                  AND password = %s
+                  AND verificado = TRUE
+                """,
+                (username, password),
             )
             user = cursor.fetchone()
 
@@ -131,6 +155,9 @@ def login():
         else:
             return jsonify({"error": "Usuario o contraseña incorrecta o no verificado"}), 401
     except Exception as e:
-        # 👇 PARA DEPURAR: manda el error real al frontend
         logging.error(f"Error en login: {e}")
+        # De momento devolvemos el error real para depurar
         return jsonify({"error": f"Error BD: {str(e)}"}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
