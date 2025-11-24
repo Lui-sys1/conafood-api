@@ -48,26 +48,30 @@ ensure_tables()
 verification_codes = {}
 
 # --- Función para enviar correo ---
-def send_verification_email(to_email, code):
+def send_verification_email(to_email, code) -> bool:
     try:
         smtp_host = "smtp.gmail.com"
         smtp_port = 587
         smtp_user = "conafood8@gmail.com"
-        smtp_pass = "bvpjxtptpzmfupwd"  # si cambiaste el pass de app, actualiza aquí
+        smtp_pass = "exfrbedzaliwlpcm"  # aquí deberías usar tu contraseña de aplicación de Gmail
 
         msg = MIMEText(f"Tu código de verificación es: {code}")
         msg["Subject"] = "Código de verificación ConaFood"
         msg["From"] = smtp_user
         msg["To"] = to_email
 
-        server = smtplib.SMTP(smtp_host, smtp_port)
+        # timeout para que no se quede trabado
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
         server.quit()
         logging.info(f"Código enviado a {to_email}")
+        return True
     except Exception as e:
         logging.error(f"Error enviando correo: {e}")
+        return False
+
 
 # --- Rutas estáticas ---
 @app.route("/")
@@ -103,6 +107,7 @@ def register():
     if not all([username, password, correo, numero]):
         return jsonify({"error": "Faltan datos"}), 400
 
+        # Generar código aleatorio de 6 dígitos
     code = str(random.randint(100000, 999999))
     verification_codes[username] = {
         "code": code,
@@ -111,9 +116,13 @@ def register():
         "numero": numero,
     }
 
-    send_verification_email(correo, code)
+    # Enviar código por correo
+    ok = send_verification_email(correo, code)
+    if not ok:
+        return jsonify({"error": "No se pudo enviar el correo de verificación. Intenta más tarde."}), 500
 
     return jsonify({"message": "Código de verificación enviado"}), 200
+
 
 # --- Ruta para verificar usuario y crear en DB ---
 @app.route("/verify", methods=["POST"])
