@@ -15,7 +15,7 @@ app = Flask(__name__)
 CORS(app)
 
 # --- Configuración DB PostgreSQL ---
-DB_HOST = os.getenv("DB_HOST", "dpg-dkqv0g6tg6s6s4r5v5tg-a.oregon-postgres.render.com")
+DB_HOST = os.getenv("DB_HOST", "dpg-dkqv0g6tg6s6s4r5v5tg-a.")
 DB_PORT = os.getenv("DB_PORT", 5432)
 DB_NAME = os.getenv("DB_NAME", "conafood_bd")
 DB_USER = os.getenv("DB_USER", "lconafood_db_user")
