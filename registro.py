@@ -105,23 +105,25 @@ def register():
     numero = data.get("numero")
 
     if not all([username, password, correo, numero]):
-    return jsonify({"error": "Faltan datos"}), 400
+        return jsonify({"error": "Faltan datos"}), 400
 
-        # Generar código aleatorio de 6 dígitos
+    # Generar código aleatorio de 6 dígitos
     code = str(random.randint(100000, 999999))
+
     verification_codes[username] = {
         "code": code,
         "password": password,
         "correo": correo,
-        "numero": numero,
+        "numero": numero
     }
 
-    # Enviar código por correo
+    # Enviar código
     ok = send_verification_email(correo, code)
     if not ok:
         return jsonify({"error": "No se pudo enviar el correo de verificación. Intenta más tarde."}), 500
 
     return jsonify({"message": "Código de verificación enviado"}), 200
+
 
 
 # --- Ruta para verificar usuario y crear en DB ---
