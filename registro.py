@@ -53,7 +53,7 @@ def send_verification_email(to_email, code) -> bool:
         smtp_host = "smtp.gmail.com"
         smtp_port = 587
         smtp_user = "conafood8@gmail.com"
-        smtp_pass = "vuvmyrxzeoelpwhp"  # aquí deberías usar tu contraseña de aplicación de Gmail
+        smtp_pass = "register"  # aquí deberías usar tu contraseña de aplicación de Gmail
 
         msg = MIMEText(f"Tu código de verificación es: {code}")
         msg["Subject"] = "Código de verificación ConaFood"
@@ -114,15 +114,20 @@ def register():
         "code": code,
         "password": password,
         "correo": correo,
-        "numero": numero
+        "numero": numero,
     }
 
-    # Enviar código
+    # Intentar enviar correo, pero NO bloquear si falla
     ok = send_verification_email(correo, code)
     if not ok:
-        return jsonify({"error": "No se pudo enviar el correo de verificación. Intenta más tarde."}), 500
+        logging.warning("No se pudo enviar el correo, pero continuamos para pruebas.")
 
-    return jsonify({"message": "Código de verificación enviado"}), 200
+    # IMPORTANTE: devolvemos también el código para que lo veas en el front (solo pruebas)
+    return jsonify({
+        "message": "Código de verificación generado (revisa tu correo o usa el código mostrado en pruebas).",
+        "code": code
+    }), 200
+
 
 
 

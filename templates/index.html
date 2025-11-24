@@ -439,12 +439,20 @@ registerForm.addEventListener('submit', async (e) => {
         const data = await res.json();
 
         if (res.ok) {
-            modalRegister.style.display = 'none';
-            modalVerificacion.style.display = 'block';
-            alert('Se envió un código de verificación a tu correo y número.');
-        } else {
-            alert(data.error);
-        }
+    modalRegister.style.display = 'none';
+    modalVerificacion.style.display = 'block';
+
+    // 👇 Solo para pruebas: mostramos el código que vino del backend
+    if (data.code) {
+        alert('Código de verificación (solo pruebas): ' + data.code);
+        console.log('Código de verificación:', data.code);
+    } else {
+        alert('Se generó un código de verificación. Revisa tu correo.');
+    }
+} else {
+    alert(data.error);
+}
+
     } catch (err) {
         console.error(err);
         alert('Error al conectarse al servidor.');
