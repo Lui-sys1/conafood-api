@@ -15,11 +15,11 @@ app = Flask(__name__)
 CORS(app)
 
 # --- Configuración DB PostgreSQL ---
-DB_HOST = os.getenv("DB_HOST", "dpg-d34rvonfte5s73adba80-a.oregon-postgres.render.com")
+DB_HOST = os.getenv("DB_HOST", "dpg-dkqv0g6tg6s6s4r5v5tg-a.oregon-postgres.render.com")
 DB_PORT = os.getenv("DB_PORT", 5432)
-DB_NAME = os.getenv("DB_NAME", "conafood")
-DB_USER = os.getenv("DB_USER", "luis5531")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "q16ddEGzzySuQJeWHHx6iG4GO0rht9kG")
+DB_NAME = os.getenv("DB_NAME", "conafood_bd")
+DB_USER = os.getenv("DB_USER", "lconafood_db_user")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "mreBT4nYK92dS7kq96jnhG7qQK7eG4KO")
 
 def get_db_connection():
     # psycopg 3, autocommit=True para no usar conn.commit() manual
