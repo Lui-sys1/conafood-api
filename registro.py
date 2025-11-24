@@ -53,7 +53,7 @@ def send_verification_email(to_email, code) -> bool:
         smtp_host = "smtp.gmail.com"
         smtp_port = 587
         smtp_user = "conafood8@gmail.com"
-        smtp_pass = "exfrbedzaliwlpcm"  # aquí deberías usar tu contraseña de aplicación de Gmail
+        smtp_pass = "vuvmyrxzeoelpwhp"  # aquí deberías usar tu contraseña de aplicación de Gmail
 
         msg = MIMEText(f"Tu código de verificación es: {code}")
         msg["Subject"] = "Código de verificación ConaFood"
@@ -105,7 +105,7 @@ def register():
     numero = data.get("numero")
 
     if not all([username, password, correo, numero]):
-        return jsonify({"error": "Faltan datos"}), 400
+    return jsonify({"error": "Faltan datos"}), 400
 
         # Generar código aleatorio de 6 dígitos
     code = str(random.randint(100000, 999999))
