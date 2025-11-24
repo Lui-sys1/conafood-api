@@ -437,27 +437,33 @@ registerForm.addEventListener('submit', async (e) => {
             body: JSON.stringify({ username, password, correo, numero })
         });
         const data = await res.json();
+        console.log('Respuesta /register:', data);
 
         if (res.ok) {
-    modalRegister.style.display = 'none';
-    modalVerificacion.style.display = 'block';
+            modalRegister.style.display = 'none';
+            modalVerificacion.style.display = 'block';
 
-    // 👇 Solo para pruebas: mostramos el código que vino del backend
-    if (data.code) {
-        alert('Código de verificación (solo pruebas): ' + data.code);
-        console.log('Código de verificación:', data.code);
-    } else {
-        alert('Se generó un código de verificación. Revisa tu correo.');
-    }
-} else {
-    alert(data.error);
-}
-
+            // MOSTRAMOS EL CÓDIGO PARA PRUEBAS
+            if (data.code) {
+                alert('Código de verificación (solo pruebas): ' + data.code);
+            } else {
+                alert('Se envió un código de verificación.');
+            }
+        } else {
+            // 👇 AQUÍ vemos el error REAL del SMTP si viene
+            if (data.smtp_error) {
+                alert('Error SMTP: ' + data.smtp_error);
+            } else {
+                alert(data.error || 'Error desconocido.');
+            }
+        }
     } catch (err) {
         console.error(err);
         alert('Error al conectarse al servidor.');
     }
 });
+
+
 
 // Verificación
 verificacionForm.addEventListener('submit', async (e) => {
